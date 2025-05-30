@@ -1,7 +1,8 @@
 import logging
-
+from typing import Optional
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from keboola.component.exceptions import UserException
+import yaml
 
 
 class Authorization(BaseModel):
@@ -15,22 +16,32 @@ class Authorization(BaseModel):
         return value
 
 
-class SyncOptions(BaseModel):
-    github_repo: str
-    github_branch: str = Field(default="main")
-    github_folder: str
+class CrewAIMetadata(BaseModel):
+    agents: str
+    tasks: str
+    flows: str
+    inputs: Optional[str] = None
 
-    @field_validator("github_repo", "github_folder")
-    def must_not_be_empty(cls, value: str, info) -> str:
-        if not value.strip():
-            raise ValueError(f"Field '{info.field_name}' cannot be empty")
-        return value
+    def parsed(self) -> dict:
+        try:
+            for name, content in self.__dict__.items():
+                if isinstance(content, str) and any(x in content for x in ["__import__", "eval", "exec"]):
+                    raise UserException(f"Security warning: disallowed content in crewai_metadata.{name}")
+
+            return {
+                "agents": yaml.safe_load(self.agents),
+                "tasks": yaml.safe_load(self.tasks),
+                "flow": yaml.safe_load(self.flows),
+                "inputs": yaml.safe_load(self.inputs) if self.inputs else {},
+            }
+        except yaml.YAMLError as e:
+            raise UserException(f"Invalid YAML in crewai_metadata: {e}")
 
 
 class Configuration(BaseModel):
-    model: str = Field(default="gpt-4.1")
+    model: str = Field(default="gpt-4.1", description="LLM model name")
     authorization: Authorization
-    sync_options: SyncOptions
+    crewai_metadata: CrewAIMetadata
     debug: bool = False
 
     def __init__(self, **data):

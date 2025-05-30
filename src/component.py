@@ -20,7 +20,7 @@ class Component(ComponentBase):
         run_time_str = run_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         config = Configuration(**self.configuration.parameters)
-        state = self.get_state_file()
+        # state = self.get_state_file()
         new_state = {}
 
         logging.info("Initializing CrewAI flow...")
@@ -40,6 +40,7 @@ class Component(ComponentBase):
         logging.info("Component state saved.")
         logging.info("CrewAI processing completed successfully!")
 
+
 """
         Main entrypoint
 """
@@ -53,4 +54,3 @@ if __name__ == "__main__":
     except Exception as exc:
         logging.exception(exc)
         exit(2)
-

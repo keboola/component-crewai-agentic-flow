@@ -1,11 +1,6 @@
-import logging
-import tempfile
-from pathlib import Path
 from typing import Dict, List
 
-import git
 import yaml
-
 from configuration import Configuration
 from keboola.component.exceptions import UserException
 from crewai import Agent, Crew, Task
@@ -22,67 +17,48 @@ from tools import (
 class CrewAIFlowBuilder:
     """
     This class handles the loading of a CrewAI YAML-defined flow
-    from a Git repository and builds metadata structures for further execution.
+    from the Keboola config input and builds metadata structures for execution.
     """
-
-    REQUIRED_FILES = ["agents.yaml", "tasks.yaml", "flow.yaml"]
 
     def __init__(self, config: Configuration):
         self.config = config
-        self.repo_url = config.sync_options.github_repo
-        self.repo_branch = config.sync_options.github_branch
-        self.flow_folder = config.sync_options.github_folder
 
-        self.local_repo_path = self._clone_repo()
-        self.flow_path = self.local_repo_path / self.flow_folder
+        parsed = self._safe_parse_metadata(config.crewai_metadata)
+        self.agents = parsed.get("agents", {})
+        self.tasks = parsed.get("tasks", {})
+        self.flow = parsed.get("flow", {})
+        self.inputs = parsed.get("inputs", {})
 
-        self._validate_required_files()
-
-        self.agents = self._load_yaml("agents.yaml")
-        self.tasks = self._load_yaml("tasks.yaml")
-        self.flow = self._load_yaml("flow.yaml")
-
-    def _clone_repo(self) -> Path:
-        """Clone the GitHub repository to a temporary directory."""
-        temp_dir = tempfile.mkdtemp(prefix="crewai-flow-")
-        logging.info(f"Cloning GitHub repo {self.repo_url}@{self.repo_branch} to {temp_dir}")
-        git.Repo.clone_from(self.repo_url, temp_dir, branch=self.repo_branch)
-        return Path(temp_dir)
-
-    def _validate_required_files(self):
-        """Ensure all required YAML files exist in the flow folder."""
-        missing = [f for f in self.REQUIRED_FILES if not (self.flow_path / f).is_file()]
-        if missing:
-            raise UserException(f"Missing required files in flow folder '{self.flow_folder}': {', '.join(missing)}")
-
-    def _load_yaml(self, filename: str) -> Dict:
-        file_path = self.flow_path / filename
-        logging.debug(f"Loading YAML: {file_path}")
+    def _safe_parse_metadata(self, metadata) -> dict:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            for name, content in metadata.__dict__.items():
+                if isinstance(content, str) and any(x in content for x in ["__import__", "eval", "exec"]):
+                    raise UserException(f"Security warning: disallowed content in crewai_metadata.{name}")
 
-            if any(x in content for x in ["__import__", "eval", "exec"]):
-                raise UserException(f"Security warning: disallowed content in {filename}")
+            parsed_agents = yaml.safe_load(metadata.agents)
+            parsed_tasks = yaml.safe_load(metadata.tasks)
+            parsed_flow = yaml.safe_load(metadata.flows)
 
-            return yaml.safe_load(content)
-
+            return {
+                "agents": parsed_agents.get("agents", parsed_agents),
+                "tasks": parsed_tasks.get("tasks", parsed_tasks),
+                "flow": parsed_flow.get("flow", parsed_flow),
+                "inputs": parsed_flow.get("inputs", {}),
+            }
         except yaml.YAMLError as e:
-            raise UserException(f"Invalid YAML in file '{filename}': {e}")
-        except Exception as e:
-            raise UserException(f"Failed to load file '{filename}': {e}")
+            raise UserException(f"Invalid YAML in crewai_metadata: {e}")
 
     def metadata(self) -> Dict:
         return {
             "agents": self.agents,
             "tasks": self.tasks,
             "flow": self.flow,
+            "inputs": self.inputs,
         }
 
-    def build_crewai_flow(self, inputs: Dict) -> Crew:
+    def build_crewai_flow(self, inputs: Dict = None) -> Crew:
         llm = LLM(
             model=self.config.model,
-            temperature=getattr(self.config, "temperature", 0.2),
             api_key=self.config.authorization.api_token,
             base_url=self.config.authorization.dict().get("base_url", None)
         )
@@ -95,33 +71,35 @@ class CrewAIFlowBuilder:
             "download_keboola_data_tool": DownloadKeboolaDataTool(),
         }
 
+        print("[DEBUG] Registered tools:", list(tool_registry.keys()))
+
         agents_by_name = {}
-        for agent_name, agent_cfg in self.agents.items():
-            tool_names = agent_cfg.get("tools", [])
+        for agent_name, agent_config in self.agents.items():
+            tool_names = agent_config.get("tools", [])
             tools = [tool_registry[name] for name in tool_names if name in tool_registry]
 
             agents_by_name[agent_name] = Agent(
-                role=agent_cfg.get("role", agent_name),
-                goal=agent_cfg.get("goal", ""),
-                backstory=agent_cfg.get("backstory", ""),
+                role=agent_config.get("role", agent_name),
+                goal=agent_config.get("goal", ""),
+                backstory=agent_config.get("backstory", ""),
                 tools=tools,
                 llm=llm,
                 verbose=self.config.debug,
             )
 
         tasks_by_name = {}
-        for task_name, task_cfg in self.tasks.items():
-            agent_name = task_cfg.get("agent")
-            if agent_name not in agents_by_name:
-                raise UserException(f"Agent '{agent_name}' for task '{task_name}' not defined in agents.yaml")
+        for task_name, task_config in self.tasks.items():
+            agent_name = task_config.get("agent")
+            if not agent_name or agent_name not in agents_by_name:
+                raise UserException(f"Agent '{agent_name}' for task '{task_name}' not defined or missing in agents")
 
             tasks_by_name[task_name] = Task(
-                description=task_cfg.get("description", ""),
-                expected_output=task_cfg.get("expected_output", ""),
+                description=task_config.get("description", ""),
+                expected_output=task_config.get("expected_output", ""),
                 agent=agents_by_name[agent_name],
             )
 
-        flow_def = self.flow.get("flow", {})
+        flow_def = self.flow
         task_sequence: List[str] = flow_def.get("tasks", [])
         ordered_tasks = [tasks_by_name[name] for name in task_sequence if name in tasks_by_name]
 
@@ -132,5 +110,5 @@ class CrewAIFlowBuilder:
             verbose=self.config.debug,
             process=flow_def.get("process", "sequential"),
             chat_llm=llm,
-            _inputs=inputs,
+            _inputs=inputs or self.inputs,
         )
