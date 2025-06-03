@@ -214,7 +214,7 @@ jobs:
       - build
       - push
     runs-on: ubuntu-latest
-    if: needs.push_event_info.outputs.is_deploy_ready == 'true'
+    # if: needs.push_event_info.outputs.is_deploy_ready == 'true'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
