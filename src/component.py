@@ -52,6 +52,9 @@ class Component(ComponentBase):
     def load_artifacts(self):
         paths = glob.glob("/data/artifacts/in/runs/*/*")
         logging.info(f"Found paths: {paths}")
+        if len(paths) == 0:
+            logging.info("No paths found")
+            return
         path = paths[0]
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
