@@ -1,2 +1,44 @@
-{}
+{
+  "type": "object",
+  "title": "Model and authorization configuration",
+  "required": [
+    "model",
+    "authorization"
+  ],
+  "properties": {
+    "model": {
+      "type": "string",
+      "title": "Model",
+      "default": "gpt-4.1",
+      "description": "Select the AI model to be used.",
+      "propertyOrder": 1
+    },
+    "authorization": {
+      "type": "object",
+      "title": "Authorization",
+      "required": [
+        "service",
+        "#api_token"
+      ],
+      "properties": {
+        "service": {
+          "type": "string",
+          "title": "Service",
+          "default": "openai",
+          "description": "The AI service provider (e.g., openai).",
+          "propertyOrder": 1
+        },
+        "#api_token": {
+          "type": "string",
+          "title": "API Token",
+          "format": "password",
+          "description": "Your API token for the selected service.",
+          "minLength": 1,
+          "propertyOrder": 2
+        }
+      },
+      "propertyOrder": 2
+    }
+  }
+}
 

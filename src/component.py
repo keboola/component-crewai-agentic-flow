@@ -4,8 +4,10 @@ CrewAI Agentic Flow App main class.
 from datetime import datetime, UTC
 import logging
 
-from keboola.component.base import ComponentBase
+from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
+from keboola.component.sync_actions import ValidationResult, MessageType
+import yaml
 
 from configuration import Configuration
 from crewai_flow_builder import CrewAIFlowBuilder
@@ -39,6 +41,43 @@ class Component(ComponentBase):
         self.write_state_file(new_state)
         logging.info("Component state saved.")
         logging.info("CrewAI processing completed successfully!")
+
+    def validate_yaml(self, yaml_string: str) -> bool:
+        try:
+            yaml.safe_load(yaml_string)
+            return True
+        except yaml.YAMLError:
+            return False
+
+    @sync_action('validate_config_yamls')
+    def validate_config_yamls(self) -> ValidationResult:
+        config = Configuration(**self.configuration.parameters)
+        invalid_sections = []
+
+        config_parts = [
+            (config.crewai_metadata.flows, "flows"),
+            (config.crewai_metadata.agents, "agents"),
+            (config.crewai_metadata.tasks, "tasks")
+        ]
+
+        for yaml_string, section_name in config_parts:
+            if not self.validate_yaml(yaml_string):
+                invalid_sections.append(section_name)
+
+        if not invalid_sections:
+            return ValidationResult(
+                "Configuration YAMLs are valid",
+                MessageType.SUCCESS
+            )
+        else:
+            if len(invalid_sections) > 1:
+                error_message = "These configuration YAMLs are invalid: " + ", ".join(invalid_sections)
+            else:
+                error_message = "This configuration YAML is invalid: " + ", ".join(invalid_sections)
+            return ValidationResult(
+                error_message,
+                MessageType.DANGER
+            )
 
 
 """

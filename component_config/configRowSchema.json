@@ -1,1 +1,78 @@
-{}
+{
+    "type": "object",
+    "title": "CrewAI Agentic Flow Configuration",
+    "required": [
+        "crewai_metadata"
+    ],
+    "properties": {
+      "crewai_metadata": {
+        "type": "object",
+        "title": "CrewAI Metadata",
+        "propertyOrder": 1,
+        "required": [
+            "flows",
+            "agents",
+            "tasks"
+        ],
+        "properties": {
+          "flows": {
+            "type": "string",
+            "title": "Flows",
+            "description": "YAML definition of flows.",
+            "format": "editor",
+            "options": {
+              "editor": {
+                "mode": "text/x-yaml",
+                "lineNumbers": true
+              }
+            },
+            "propertyOrder": 10
+          },
+          "agents": {
+            "type": "string",
+            "title": "Agents",
+            "description": "YAML definition of agents.",
+            "format": "editor",
+            "options": {
+              "editor": {
+                "mode": "text/x-yaml",
+                "lineNumbers": true
+              }
+            },
+            "propertyOrder": 20
+          },
+          "tasks": {
+            "type": "string",
+            "title": "Tasks",
+            "description": "YAML definition of tasks.",
+            "format": "editor",
+            "options": {
+              "editor": {
+                "mode": "text/x-yaml",
+                "lineNumbers": true
+              }
+            },
+            "propertyOrder": 30
+          },
+          "validate_config_yamls": {
+            "type": "button",
+            "format": "sync-action",
+            "propertyOrder": 40,
+            "options": {
+              "async": {
+                "label": "VALIDATE CONFIGURATION YAMLs",
+                "action": "validate_config_yamls"
+              }
+            }
+          }
+        }
+      },
+      "debug": {
+        "type": "boolean",
+        "title": "Enable Debug Mode",
+        "format": "checkbox",
+        "default": false,
+        "propertyOrder": 2
+      }
+    }
+  }
