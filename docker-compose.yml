@@ -5,6 +5,7 @@ services:
     volumes:
         - ./:/code
         - ./data:/data
+        - ./tmp:/tmp
     environment:
       - KBC_DATADIR=./data
   test:

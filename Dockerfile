@@ -5,6 +5,9 @@ ENV PYTHONIOENCODING=utf-8
 RUN apt-get update
 RUN pip install flake8
 
+# set the storage directory for crewai
+ENV CREWAI_STORAGE_DIR=/tmp
+
 COPY requirements.txt /code/requirements.txt
 RUN pip install -r /code/requirements.txt
 
