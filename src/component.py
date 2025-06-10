@@ -3,7 +3,6 @@ CrewAI Agentic Flow App main class.
 """
 from datetime import datetime, UTC
 import logging
-import io
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
@@ -44,20 +43,14 @@ class Component(ComponentBase):
         logging.info("CrewAI processing completed successfully!")
 
     def validate_yaml(self, yaml_string: str) -> bool:
-        loader = None
         try:
-            stream = io.StringIO(yaml_string)
-            loader = yaml.SafeLoader(stream)
-            loader.get_single_node()
+            yaml.safe_load(yaml_string)
             return True
         except yaml.YAMLError:
             return False
         except Exception as e:
             logging.error(f"Unexpected error during YAML validation: {e!r}")
             return False
-        finally:
-            if loader and hasattr(loader, 'dispose'):
-                loader.dispose()
 
     @sync_action('validate_config_yamls')
     def validate_config_yamls(self) -> ValidationResult:
