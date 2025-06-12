@@ -48,9 +48,6 @@ class Component(ComponentBase):
             return True
         except yaml.YAMLError:
             return False
-        except Exception as e:
-            logging.error(f"Unexpected error during YAML validation: {e!r}")
-            return False
 
     @sync_action('validate_config_yamls')
     def validate_config_yamls(self) -> ValidationResult:
