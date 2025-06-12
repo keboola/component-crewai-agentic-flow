@@ -1,17 +1,60 @@
-from typing import Dict, List
-
+from __future__ import annotations
+from typing import Dict, List, TYPE_CHECKING
+from types import ModuleType
 import yaml
 from configuration import Configuration
 from keboola.component.exceptions import UserException
-from crewai import Agent, Crew, Task
-from crewai.llm import LLM
-from tools import (
-    ReadKeboolaTableTool,
-    ReadKeboolaFileTool,
-    WriteKeboolaTableTool,
-    WriteKeboolaFileTool,
-    DownloadKeboolaDataTool,
-)
+
+# Import for type checking, real import is done lazy by requires_import decorator
+if TYPE_CHECKING:
+    from crewai import Agent, Crew, Task
+    from crewai.llm import LLM
+    from tools import (
+        ReadKeboolaTableTool,
+        ReadKeboolaFileTool,
+        WriteKeboolaTableTool,
+        WriteKeboolaFileTool,
+        DownloadKeboolaDataTool,
+    )
+
+
+def requires_import(*mods):
+    """
+    A decorator to lazily import modules or objects from modules.
+    It handles both `import module` and `from module import object`.
+    Example 1 - 'import yaml':
+
+        @requires_import('yaml')
+        def my_function():
+            pass
+
+    Example 2 - 'from crewai import Agent, Crew, Task':
+
+        @requires_import(('crewai', ['Agent', 'Crew', 'Task']))
+        def my_function():
+            pass
+    """
+    def decorator(fn):
+        def wrapper(*args, **kwargs):
+            for mod in mods:
+                if isinstance(mod, tuple):
+                    # Handles 'from module import name' or 'from module import name1, name2'
+                    package, names = mod
+                    if isinstance(names, str):
+                        names = [names]
+
+                    module = __import__(package, fromlist=names)
+
+                    for name in names:
+                        if name not in globals():
+                            globals()[name] = getattr(module, name)
+                elif isinstance(mod, str):
+                    # Handles 'import module'
+                    if mod not in globals() or not isinstance(globals().get(mod), ModuleType):
+                        globals()[mod] = __import__(mod)
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class CrewAIFlowBuilder:
@@ -20,6 +63,21 @@ class CrewAIFlowBuilder:
     from the Keboola config input and builds metadata structures for execution.
     """
 
+    # Use a lazy import because crewai consumes almost all memory during the execution of the sync action.
+    @requires_import(
+        ("crewai.llm", "LLM"),
+        ("crewai", ["Agent", "Crew", "Task"]),
+        (
+            "tools",
+            [
+                "ReadKeboolaTableTool",
+                "ReadKeboolaFileTool",
+                "WriteKeboolaTableTool",
+                "WriteKeboolaFileTool",
+                "DownloadKeboolaDataTool",
+            ],
+        ),
+    )
     def __init__(self, config: Configuration):
         self.config = config
 
