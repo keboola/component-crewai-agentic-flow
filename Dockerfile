@@ -1,22 +1,21 @@
 FROM python:3.11-slim
-ENV PYTHONIOENCODING=utf-8
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+WORKDIR /code/
 
-# install gcc to be able to build packages - e.g. required by regex, dateparser, also required for pandas
-RUN apt-get update
-RUN pip install flake8
+COPY pyproject.toml .
+COPY uv.lock .
 
 # set the storage directory for crewai
 ENV CREWAI_STORAGE_DIR=/tmp
 
-COPY requirements.txt /code/requirements.txt
-RUN pip install -r /code/requirements.txt
+ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+RUN uv sync --all-groups --frozen
 
-COPY /src /code/src/
-COPY /tests /code/tests/
-COPY /scripts /code/scripts/
-COPY flake8.cfg /code/flake8.cfg
-COPY deploy.sh /code/deploy.sh
-
-WORKDIR /code/
+COPY src/ src
+COPY tests/ tests
+COPY scripts/ scripts
+COPY flake8.cfg .
+COPY deploy.sh .
 
 CMD ["python", "-u", "/code/src/component.py"]
+
