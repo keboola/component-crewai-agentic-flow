@@ -10,9 +10,8 @@ from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import ValidationResult, MessageType
 import yaml
 
-from configuration import Configuration
+from configuration import Configuration, Authorization
 from crewai_flow_builder import CrewAIFlowBuilder
-from configuration import Authorization
 
 from openai import AsyncOpenAI, AsyncAzureOpenAI
 from google import genai
@@ -87,8 +86,8 @@ class Component(ComponentBase):
 
     @sync_action('listModels')
     def list_models(self):
-        config = Configuration(**self.configuration.parameters)
-        return asyncio.run(self._get_models_for_service(config.authorization))
+        authorization = Authorization(**self.configuration.parameters.get("authorization", {}))
+        return asyncio.run(self._get_models_for_service(authorization))
 
     async def _get_models_for_service(self, auth: Authorization) -> list:
         """Get models for specific service without needing separate client classes"""
