@@ -8,6 +8,9 @@ import yaml
 class Authorization(BaseModel):
     service: str
     api_token: str = Field(alias="#api_token")
+    api_base: Optional[str] = ""
+    deployment_id: Optional[str] = ""
+    api_version: Optional[str] = ""
 
     @field_validator("api_token", "service")
     def must_not_be_empty(cls, value: str, info) -> str:

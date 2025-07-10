@@ -3,11 +3,13 @@ name = "component-crewai-agentic-flow"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+    "anthropic>=0.56.0",
     "crewai==0.121.1",
     "dateparser==1.2.1",
     "flake8>=7.2.0",
     "freezegun==1.5.1",
     "gitpython==3.1.44",
+    "google-genai>=1.24.0",
     "keboola-component==1.6.10",
     "keboola-http-client==1.0.1",
     "keboola-utils==1.1.0",

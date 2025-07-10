@@ -3,6 +3,7 @@ CrewAI Agentic Flow App main class.
 """
 from datetime import datetime, UTC
 import logging
+import asyncio
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
@@ -11,6 +12,11 @@ import yaml
 
 from configuration import Configuration
 from crewai_flow_builder import CrewAIFlowBuilder
+from configuration import Authorization
+
+from openai import AsyncOpenAI, AsyncAzureOpenAI
+from google import genai
+from anthropic import AsyncAnthropic
 
 
 class Component(ComponentBase):
@@ -78,6 +84,61 @@ class Component(ComponentBase):
                 error_message,
                 MessageType.DANGER
             )
+
+    @sync_action('listModels')
+    def list_models(self):
+        config = Configuration(**self.configuration.parameters)
+        return asyncio.run(self._get_models_for_service(config.authorization))
+
+    async def _get_models_for_service(self, auth: Authorization) -> list:
+        """Get models for specific service without needing separate client classes"""
+        service = auth.service
+        models = []
+        if service == "openai":
+            client = AsyncOpenAI(api_key=auth.api_token)
+            models = await client.models.list()
+            models = [model.id for model in models.data]
+
+        # TODO: Its need test this service, no credentials available
+        elif service == "azure_openai":
+            client = AsyncAzureOpenAI(
+                api_key=auth.api_token,
+                api_version=auth.api_version,
+                azure_endpoint=auth.api_base,
+                deployment_id=auth.deployment_id
+            )
+            models = await client.models.list()
+            models = [model.id for model in models.data]
+
+        # TODO: Its need test this service, no credentials available
+        elif service == "google":
+            client = genai.Client(api_key=auth.api_token)
+            models_response = client.models.list()
+            models = [
+                m.name for m in models_response
+                if hasattr(m, 'supported_generation_methods') and
+                'generateContent' in m.supported_generation_methods
+            ]
+
+        # TODO: Its need test this service, no credentials available
+        elif service == "huggingface":
+            predefined_models = {
+                "Serverless/Meta-Llama-3-8B-Instruct": "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", # noqa
+                "Serverless/Mistral-Nemo-Instruct-2407": "https://api-inference.huggingface.co/models/mistralai/Mistral-Nemo-Instruct-2407", # noqa
+                "Serverless/Phi-3-mini-4k-instruct": "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct" # noqa
+            }
+            return list(predefined_models.keys())
+
+        # TODO: Its need test this service, no credentials available
+        elif service == "anthropic":
+            client = AsyncAnthropic(api_key=auth.api_token)
+            models = await client.models.list()
+            models = [model.id for model in models.data]
+        else:
+            models = []
+
+        result = [{"value": m, "label": m} for m in models]
+        return result
 
 
 """
