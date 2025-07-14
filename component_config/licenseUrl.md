@@ -1,0 +1,1 @@
+https://github.com/keboola/component-crewai-agentic-flow/blob/master/LICENSE.md

@@ -1,0 +1,96 @@
+{
+  "type": "object",
+  "title": "Model and authorization configuration",
+  "required": [
+    "model",
+    "authorization"
+  ],
+  "properties": {
+    "authorization": {
+      "type": "object",
+      "title": "Authorization",
+      "required": [
+        "service",
+        "#api_token"
+      ],
+      "properties": {
+        "service": {
+          "type": "string",
+          "title": "AI Service Provider",
+          "enum": [
+            "openai",
+            "azure_openai",
+            "google",
+            "huggingface",
+            "anthropic"
+          ],
+          "default": "openai",
+          "options": {
+            "enum_titles": [
+              "OpenAI",
+              "Azure OpenAI",
+              "Google (Only available on US stack)",
+              "Hugging Face",
+              "Anthropic"
+            ]
+          },
+          "propertyOrder": 1
+        },
+        "#api_token": {
+          "type": "string",
+          "title": "API Token",
+          "format": "password",
+          "description": "Your API token for the selected service.",
+          "minLength": 1,
+          "propertyOrder": 2
+        },
+        "api_base": {
+          "type": "string",
+          "title": "API Base",
+          "options": {
+            "dependencies": {
+              "service": "azure_openai"
+            }
+          },
+          "propertyOrder": 3
+        },
+        "deployment_id": {
+          "type": "string",
+          "title": "Deployment ID",
+          "options": {
+            "dependencies": {
+              "service": "azure_openai"
+            }
+          },
+          "propertyOrder": 4
+        },
+        "api_version": {
+          "type": "string",
+          "title": "API Version",
+          "default": "2023-05-15",
+          "options": {
+            "dependencies": {
+              "service": "azure_openai"
+            }
+          },
+          "propertyOrder": 5
+        }
+      },
+      "propertyOrder": 1
+    },
+    "model": {
+      "type": "string",
+      "title": "Model",
+      "enum": [],
+      "description": "Select the AI model to be used.",
+      "propertyOrder": 2,
+      "options": {
+        "async": {
+          "label": "List models",
+          "action": "listModels"
+        }
+      }
+    }
+  }
+}
+
