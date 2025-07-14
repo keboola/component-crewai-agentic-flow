@@ -5,7 +5,7 @@
       "crewai_metadata"
   ],
   "properties": {
-    "crew_template": {
+    "template": {
       "type": "string",
       "title": "CrewAI Template",
       "description": "You can load predefined templates to get started with your crew.",

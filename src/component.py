@@ -143,7 +143,7 @@ class Component(ComponentBase):
     @sync_action('loadTemplate')
     def load_template(self) -> str:
         config = Configuration(**self.configuration.parameters)
-        template_name = config.template_name
+        template_name = config.template
         with open('src/templates/templates.json', 'r') as json_file:
             templates = json.load(json_file)
         template = templates.get(template_name)
@@ -152,7 +152,7 @@ class Component(ComponentBase):
         return {
             "type": "data",
             "data": {
-                "template_name": template_name,
+                "template": template_name,
                 "crewai_metadata": {
                     "flows": template.get("flows", ""),
                     "tasks": template.get("tasks", ""),
