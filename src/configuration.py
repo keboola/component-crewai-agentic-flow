@@ -45,6 +45,7 @@ class Configuration(BaseModel):
     model: str = Field(default="gpt-4.1", description="LLM model name")
     authorization: Authorization
     crewai_metadata: CrewAIMetadata
+    template_name: str = Field(default="empty_template", description="Template name")
     debug: bool = False
 
     def __init__(self, **data):

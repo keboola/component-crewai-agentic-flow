@@ -4,6 +4,7 @@ CrewAI Agentic Flow App main class.
 from datetime import datetime, UTC
 import logging
 import asyncio
+import json
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
@@ -138,6 +139,28 @@ class Component(ComponentBase):
 
         result = [{"value": m, "label": m} for m in models]
         return result
+
+    @sync_action('loadTemplate')
+    def load_template(self) -> str:
+        config = Configuration(**self.configuration.parameters)
+        template_name = config.template_name
+        with open('src/templates/templates.json', 'r') as json_file:
+            templates = json.load(json_file)
+        template = templates.get(template_name)
+        if not template:
+            raise UserException(f"Template {template_name} not found.")
+        return {
+            "type": "data",
+            "data": {
+                "template_name": template_name,
+                "crewai_metadata": {
+                    "flows": template.get("flows", ""),
+                    "tasks": template.get("tasks", ""),
+                    "agents": template.get("agents", "")
+                },
+                "debug": config.debug
+            }
+        }
 
 
 """
